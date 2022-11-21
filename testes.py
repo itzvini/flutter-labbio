@@ -5,7 +5,7 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import openpyxl
 import time
-# teste!
+# teste! tesste
 #Abre o Arquivo de Excel onde serão salvos os dados
 wb = openpyxl.load_workbook('teste.xlsx')
 ws = wb.active #Abre a aba ativa do arquivo de excel
