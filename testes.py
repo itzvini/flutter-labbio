@@ -6,9 +6,11 @@ import matplotlib.pyplot as plt
 import openpyxl
 import time
 
+#Abre o Arquivo de Excel onde serão salvos os dados
 wb = openpyxl.load_workbook('teste.xlsx')
-ws = wb.active
+ws = wb.active #Abre a aba ativa do arquivo de excel
 
+#Função para associar um numero de iteração a uma coluna do excel
 def find_letter(iterador):
     if iterador == 0:
         return 'A'
@@ -112,43 +114,53 @@ def find_letter(iterador):
         return 'AX'
     if iterador == 50:
         return 'AY'
-    
+
+#Função para apagar todas as linhas do excel
 def delete_all_rows():
     while ws['A1'].value != None:
         ws.delete_rows(1)
     return
     
-    
+#Função para achar a borda mais proxima do centro da imagem
 def find_nearest_white(canny, target):
     nonzero = cv.findNonZero(canny)
     distances = np.sqrt((nonzero[:,:,0] - target[0]) ** 2 + (nonzero[:,:,1] - target[1]) ** 2)
     nearest_index = np.argmin(distances)
     return nonzero[nearest_index]
 
-
+#Obtem o nome do arquivo de imagem
 img = cv.VideoCapture('3.mp4')
+
+#Define o tamanho da imagem
 frame_width = int(img.get(3))
 frame_height = int(img.get(4))
-   
 size = (frame_width, frame_height)
+
+#Iniciador onde será salvo o video
 result = cv.VideoWriter('00.mp4', cv.VideoWriter_fourcc(*'mp4v'), 10, size)
                  
-                 
+#Input para receber a quantidade de linhas que aparecerão em cada folheto
 number_of_angles = int(input("Digite o numero de linhas para cada folheto: "))
 
-
+#Inicializ os dados do Excel vazios
 delete_all_rows()
-#excel coluna de frames
+
+#Variavel para auxiliar na manipulação de linhas e colunas do excel
 count = 2
+
+#Variavel de linhas totais sendo igual ao numero de angulos multiplicado pelo nuemro de folhetos
 linhas = number_of_angles*3
+
+#Variavel de Angulo
 angulo = 360/linhas
 
+#Parte que define quantas colunas serão necessarias para o excel
 iterador = 1
 for iterador in range(linhas+1):
     letra = find_letter(iterador)
     ws[f'{letra}1'] = angulo*iterador
-    
-    
+
+#Loop principal de iteracao
 while True:
     ws[f'A{count}'] = str(count-1) 
     ret, frame = img.read()
