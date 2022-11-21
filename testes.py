@@ -197,7 +197,9 @@ while True:
     G = 0, 255, 0 #Verde
     B = 255, 0, 0 #Azul
     
-        
+    
+    #alteração
+    
     loop = 0
     i = 1
     k = 1
