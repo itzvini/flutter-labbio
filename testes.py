@@ -128,8 +128,9 @@ def find_nearest_white(canny, target):
     return nonzero[nearest_index]
 
 #Obtem o nome do arquivo de imagem
-img = cv.VideoCapture('3.mp4')
-
+img = cv.VideoCapture('7.mp4')
+prevCircle = None
+dist = lambda x1, y1, x2, y2: np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 #Define o tamanho da imagem
 frame_width = int(img.get(3))
 frame_height = int(img.get(4))
@@ -165,93 +166,83 @@ while True:
     ret, frame = img.read()
     if not ret:
         break
-    grey = cv.cvtColor(frame, cv.COLOR_BGRA2GRAY)
-    kernel = np.ones((5,5), np.uint8)
-    grey = cv.GaussianBlur(grey, (9,9), 0)
-    grey = cv.morphologyEx(grey, cv.MORPH_OPEN, kernel)
-    grey = cv.morphologyEx(grey, cv.MORPH_CLOSE, kernel)
     
-    canny = cv.Canny(grey, 100, 200) 
-    
-    #centro da valvula
-    TARGET = (int(canny.shape[1]/2), int(canny.shape[0]/2))
-    
+    w0 = frame.shape[0]
+    h0 = frame.shape[1]
     
     # Ellipse parameters
-    radius = 255
+    radius = 145
     axes = (radius, radius)
     angle = 0
     
     thickness = -1
-    w0 = frame.shape[0]
-    h0 = frame.shape[1]
-    
     back = cv.imread('white.png')
-    print(w0, h0)
-    back = cv.resize(back, (h0, w0))
-    frame = cv.subtract(back, frame)
     
     W = (255, 255, 255) #Branco
+    Y = (127, 255, 212) #Amarelo
     R = 0, 0, 255 #Vermelho
     G = 0, 255, 0 #Verde
     B = 255, 0, 0 #Azul
     
     
-    #alteração
+    # grayFrame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    # blurFrame = cv.GaussianBlur(grayFrame, (5, 5), 0)
+    # circles = cv.HoughCircles(blurFrame, cv.HOUGH_GRADIENT, 1.4, 1000, param1=100, param2=200, minRadius=143, maxRadius=147)
+    # if circles is not None:
+    #     circles = np.uint16(np.around(circles))
+    #     chosen = None
+    #     for i in circles[0, ]:
+    #         if chosen is None: chosen = i
+    #         if prevCircle is not None:
+    #             if dist(chosen[0],chosen[1],prevCircle[0],prevCircle[1]) <= dist(i[0],i[1],prevCircle[0],prevCircle[1]):
+    #                 chosen = i
+    #     cv.circle(frame, (chosen[0], chosen[1]), chosen[2], (0, 255, 0), 2)
+    #     prevCircle = chosen
     
+    # centro = (chosen[0], chosen[1])
+    centro = [307, 250]
     loop = 0
     i = 1
-    k = 1
-    
+    k = 0
     iterador = 1
+    imgcopy = frame.copy()
     while loop < linhas:
+        mask = np.ones((w0,h0),dtype=np.uint8)
+        src1_mask=cv.cvtColor(mask,cv.COLOR_GRAY2BGR)#change mask to a 3 channel image
         letra = find_letter(iterador)
         if cv.waitKey(1) & 0xFF == ord('q'):
             img.release()
             result.release()
             cv.destroyAllWindows()
-        mask = np.ones((w0,h0),dtype=np.uint8)
-        src1_mask=cv.cvtColor(mask,cv.COLOR_GRAY2BGR)#change mask to a 3 channel image
-        startAngle = (k*angulo)-1
+        startAngle = (k*angulo)
         endAngle = (i*angulo)
         if loop == linhas-1:
             endAngle = 360
-        cv.ellipse(src1_mask, TARGET, axes, angle, startAngle, endAngle, (255,255,255), thickness)
-        cv.circle(src1_mask, TARGET, 5, (0,0,0), -1)
-        mask_out=cv.subtract(src1_mask, frame)
+        mascara = cv.inRange(src1_mask, (0, 0, 50), (20, 20,255))
+        cv.ellipse(src1_mask, centro, axes, angle, startAngle, endAngle, (255,255,255), thickness)
+        mask_out=cv.subtract(src1_mask, imgcopy)
         mask_out=cv.subtract(src1_mask,mask_out)
-        grey = cv.GaussianBlur(mask_out, (9,9), 0)
-        canny = cv.Canny(grey, 100, 200)
+        
+        canny = cv.inRange(mask_out, (0, 0, 50), (50, 50,255))
         try:
-            pointAB = find_nearest_white(canny, TARGET)
+            pointAB = find_nearest_white(canny, (centro))
+            if startAngle >= 0 and endAngle <= 120:
+                color = B
+            if startAngle >= 120 and endAngle <= 240:
+                color = G
+            if startAngle >= 240 and endAngle <= 360:
+                color = Y
+            cv.line(frame, (centro), (int(pointAB[0][0]), int(pointAB[0][1])), (color), 1)
+            raio = np.sqrt((pointAB[0][0] - centro[0]) ** 2 + (pointAB[0][1] - centro[1]) ** 2)
+            print(startAngle, endAngle, f'raio = {raio}')
+            ws[f'{letra}{count}'] = raio
         except:
             print(f"nenhum ponto branco em {startAngle} e {endAngle}")
-        if startAngle >= 0 and endAngle <= 119:
-            color = B
-        if startAngle >= 120 and endAngle <= 239:
-            color = G
-        if startAngle >= 240 and endAngle <= 360:
-            color = R
-        cv.line(frame, (int(canny.shape[1]/2), int(canny.shape[0]/2)), (int(pointAB[0][0]), int(pointAB[0][1])), (color), 1)
-        raio = np.sqrt((pointAB[0][0] - TARGET[0]) ** 2 + (pointAB[0][1] - TARGET[1]) ** 2)
-        print(startAngle, endAngle, f'raio = {raio}')
-        ws[f'{letra}{count}'] = raio
         iterador += 1
         i += 1
         k += 1
         loop += 1
         
-    # cv.line(frame, (int(canny.shape[1]/2), int(canny.shape[0]/2)), (619, 100), (W), 1)
-    # cv.line(frame, (int(canny.shape[1]/2), int(canny.shape[0]/2)), (1002, 319), (W), 1)
-    # cv.line(frame, (int(canny.shape[1]/2), int(canny.shape[0]/2)), (618, 541), (W), 1)
-     
-    #Circulo externo
-    cv.circle(frame, (int(canny.shape[1]/2), int(canny.shape[0]/2)), 255, (0, 255, 0), 2)
-    
-    #Pontos entre folhetos
-    cv.circle(frame, (619, 100), 0, (0, 0, 255), 8)
-    cv.circle(frame, (1002, 319), 0, (0, 0, 255), 8)
-    cv.circle(frame, (618, 541), 0, (0, 0, 255), 8)
     
     count += 1
     cv.imshow('mask', frame)   
